@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Manage Courses</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="attendance-container">
+        <h2>Manage Courses</h2>
+
+        <!-- Add Course Form -->
+        <div class="course-form">
+            <h3>Add New Course</h3>
+            <div class="input-group">
+                <label for="course-name">Course Name:</label>
+                <input type="text" id="course-name" placeholder="Enter course name" required>
+            </div>
+            <button class="attendance-btn" onclick="addCourse()">Add Course</button>
+            <p id="add-error" class="error-message"></p>
+        </div>
+
+        <!-- Course List -->
+        <div class="course-list">
+            <h3>Your Courses</h3>
+            <table class="attendance-table" id="course-table">
+                <thead>
+                    <tr>
+                        <th>Course Name</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="course-list-body">
+                    <!-- Courses will be listed here -->
+                </tbody>
+            </table>
+            <p id="no-courses" class="info">No courses added yet.</p>
+        </div>
+
+        <div class="action-buttons">
+            <button class="attendance-btn" onclick="window.location.href='attendance.html'">Back to Attendance</button>
+        </div>
+    </div>
+
+    <script>
+        function loadCourses() {
+            const courses = JSON.parse(localStorage.getItem('courses')) || [];
+            const courseList = document.getElementById('course-list-body');
+            const noCourses = document.getElementById('no-courses');
+            
+            courseList.innerHTML = '';
+            
+            if (courses.length === 0) {
+                noCourses.style.display = 'block';
+                return;
+            }
+            
+            noCourses.style.display = 'none';
+            courses.forEach(course => {
+                const row = `
+                    <tr>
+                        <td>${course.name}</td>
+                        <td>
+                            <button class="edit-btn" onclick="deleteCourse('${course.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                courseList.innerHTML += row;
+            });
+        }
+
+        function addCourse() {
+            const nameInput = document.getElementById('course-name');
+            const errorElement = document.getElementById('add-error');
+            
+            const name = nameInput.value.trim();
+
+            // Validation
+            if (!name) {
+                errorElement.textContent = 'Please enter a course name';
+                return;
+            }
+
+            const courses = JSON.parse(localStorage.getItem('courses')) || [];
+            
+            // Check for duplicate course names
+            if (courses.some(course => course.name.toLowerCase() === name.toLowerCase())) {
+                errorElement.textContent = 'A course with this name already exists';
+                return;
+            }
+
+            // Add new course
+            const newCourse = {
+                id: 'course_' + Date.now(),
+                name: name,
+                attendanceRecords: []
+            };
+
+            courses.push(newCourse);
+            localStorage.setItem('courses', JSON.stringify(courses));
+
+            // Reset form
+            nameInput.value = '';
+            errorElement.textContent = '';
+
+            loadCourses();
+        }
+
+        function deleteCourse(courseId) {
+            if (confirm('Are you sure you want to delete this course?')) {
+                let courses = JSON.parse(localStorage.getItem('courses')) || [];
+                courses = courses.filter(course => course.id !== courseId);
+                localStorage.setItem('courses', JSON.stringify(courses));
+                loadCourses();
+            }
+        }
+
+        // Load courses when page loads
+        window.onload = loadCourses;
+    </script>
+</body>
+</html>
+

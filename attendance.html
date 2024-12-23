@@ -26,6 +26,7 @@
                     </tr>
                 </thead>
                 <tbody id="attendance-body">
+                    <!-- Courses will be loaded here -->
                 </tbody>
             </table>
             <p id="no-courses" class="info">No courses added yet. Add courses from the Manage Courses page.</p>
@@ -37,6 +38,7 @@
         </div>
     </div>
 
+    <!-- Mark Attendance Modal -->
     <div class="modal" id="markAttendanceModal">
         <div class="modal-content">
             <span class="close" onclick="closeMarkAttendanceModal()">&times;</span>
@@ -46,6 +48,7 @@
                 <input type="date" id="attendance-date" required>
             </div>
             <div id="class-entries">
+                <!-- Class entries will be dynamically added here -->
             </div>
             <button class="action-btn" onclick="addClassEntry()">Add Another Class</button>
             <button class="action-btn" onclick="saveAttendance()">Save Attendance</button>
@@ -53,17 +56,20 @@
         </div>
     </div>
 
+    <!-- Attendance Records Portal -->
     <div class="modal" id="attendancePortal">
         <div class="modal-content attendance-portal">
             <span class="close" onclick="closeAttendancePortal()">&times;</span>
             <h3>Attendance Records for <span id="portal-course-name"></span></h3>
             <div class="attendance-records" id="attendance-records">
+                <!-- Attendance records will be loaded here -->
             </div>
             <button class="action-btn" onclick="closeAttendancePortal()">Close</button>
         </div>
     </div>
 
     <script>
+        // Load and display courses
         function loadCourses() {
             const courses = JSON.parse(localStorage.getItem('courses')) || [];
             const tbody = document.getElementById('attendance-body');
@@ -105,7 +111,9 @@
             document.getElementById('mark-course-name').textContent = course.name;
             document.getElementById('attendance-date').value = new Date().toISOString().split('T')[0];
             
+            // Clear existing class entries
             document.getElementById('class-entries').innerHTML = '';
+            // Add initial class entry
             addClassEntry();
             
             window.currentCourseId = courseId;
@@ -131,6 +139,7 @@
                 course.attendanceRecords = [];
             }
 
+            // Get all class entries
             const classEntries = document.querySelectorAll('.class-entry');
             const attendanceRecords = Array.from(classEntries).map(entry => {
                 return {
@@ -139,15 +148,20 @@
                 };
             });
 
+            // Check if an entry for this date already exists
             const existingIndex = course.attendanceRecords.findIndex(record => record.date === attendanceDate);
             if (existingIndex !== -1) {
+                // Update existing record
                 course.attendanceRecords[existingIndex].classes = attendanceRecords;
             } else {
+                // Add new record
                 course.attendanceRecords.push({
                     date: attendanceDate,
                     classes: attendanceRecords
                 });
             }
+
+            // Sort records by date
             course.attendanceRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             localStorage.setItem('courses', JSON.stringify(courses));
@@ -234,6 +248,8 @@
             
             localStorage.setItem('courses', JSON.stringify(courses));
         }
+
+        // Initialize the page
         window.onload = loadCourses;
     </script>
 </body>

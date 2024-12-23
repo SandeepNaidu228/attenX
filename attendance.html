@@ -72,6 +72,7 @@
         // Load and display courses
         function loadCourses() {
             const courses = JSON.parse(localStorage.getItem('courses')) || [];
+            console.log('Loaded courses:', courses);
             const tbody = document.getElementById('attendance-body');
             const noCourses = document.getElementById('no-courses');
             
@@ -84,9 +85,13 @@
             
             noCourses.style.display = 'none';
             courses.forEach(course => {
+                console.log('Course:', course);
                 const attendanceRecords = course.attendanceRecords || [];
+                console.log('Attendance Records:', attendanceRecords);
                 const totalClasses = attendanceRecords.reduce((sum, record) => sum + record.classes.length, 0);
+                console.log('Total Classes:', totalClasses);
                 const attendedClasses = attendanceRecords.reduce((sum, record) => sum + record.classes.filter(c => c.status === 'present').length, 0);
+                console.log('Attended Classes:', attendedClasses);
                 const percentage = totalClasses > 0 ? ((attendedClasses / totalClasses) * 100).toFixed(1) : '0.0';
                 
                 const row = `
@@ -100,7 +105,9 @@
                     </tr>
                 `;
                 tbody.innerHTML += row;
+                console.log('Row added for course:', course.name);
             });
+            console.log('Courses loaded and displayed');
         }
 
         function openMarkAttendanceModal(courseId) {
@@ -250,7 +257,10 @@
         }
 
         // Initialize the page
-        window.onload = loadCourses;
+        window.addEventListener('load', function() {
+            console.log('Window loaded');
+            loadCourses();
+        });
     </script>
 </body>
 </html>

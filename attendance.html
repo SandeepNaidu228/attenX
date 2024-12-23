@@ -26,7 +26,6 @@
                     </tr>
                 </thead>
                 <tbody id="attendance-body">
-                    <!-- Courses will be loaded here -->
                 </tbody>
             </table>
             <p id="no-courses" class="info">No courses added yet. Add courses from the Manage Courses page.</p>
@@ -38,7 +37,6 @@
         </div>
     </div>
 
-    <!-- Mark Attendance Modal -->
     <div class="modal" id="markAttendanceModal">
         <div class="modal-content">
             <span class="close" onclick="closeMarkAttendanceModal()">&times;</span>
@@ -47,32 +45,25 @@
                 <label for="attendance-date">Date:</label>
                 <input type="date" id="attendance-date" required>
             </div>
-            <div class="input-group">
-                <label for="attendance-status">Status:</label>
-                <select id="attendance-status" required>
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                </select>
+            <div id="class-entries">
             </div>
+            <button class="action-btn" onclick="addClassEntry()">Add Another Class</button>
             <button class="action-btn" onclick="saveAttendance()">Save Attendance</button>
             <p id="modal-error" class="error-message"></p>
         </div>
     </div>
 
-    <!-- Attendance Records Portal -->
     <div class="modal" id="attendancePortal">
         <div class="modal-content attendance-portal">
             <span class="close" onclick="closeAttendancePortal()">&times;</span>
             <h3>Attendance Records for <span id="portal-course-name"></span></h3>
             <div class="attendance-records" id="attendance-records">
-                <!-- Attendance records will be loaded here -->
             </div>
             <button class="action-btn" onclick="closeAttendancePortal()">Close</button>
         </div>
     </div>
 
     <script>
-        // Load and display courses
         function loadCourses() {
             const courses = JSON.parse(localStorage.getItem('courses')) || [];
             const tbody = document.getElementById('attendance-body');
@@ -88,8 +79,8 @@
             noCourses.style.display = 'none';
             courses.forEach(course => {
                 const attendanceRecords = course.attendanceRecords || [];
-                const totalClasses = attendanceRecords.length;
-                const attendedClasses = attendanceRecords.filter(record => record.status === 'present').length;
+                const totalClasses = attendanceRecords.reduce((sum, record) => sum + record.classes.length, 0);
+                const attendedClasses = attendanceRecords.reduce((sum, record) => sum + record.classes.filter(c => c.status === 'present').length, 0);
                 const percentage = totalClasses > 0 ? ((attendedClasses / totalClasses) * 100).toFixed(1) : '0.0';
                 
                 const row = `
@@ -113,7 +104,10 @@
             document.getElementById('markAttendanceModal').style.display = 'flex';
             document.getElementById('mark-course-name').textContent = course.name;
             document.getElementById('attendance-date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('attendance-status').value = 'present';
+            
+            document.getElementById('class-entries').innerHTML = '';
+            addClassEntry();
+            
             window.currentCourseId = courseId;
         }
 
@@ -125,7 +119,6 @@
 
         function saveAttendance() {
             const attendanceDate = document.getElementById('attendance-date').value;
-            const attendanceStatus = document.getElementById('attendance-status').value;
             const courses = JSON.parse(localStorage.getItem('courses'));
             const course = courses.find(c => c.id === window.currentCourseId);
             
@@ -138,26 +131,50 @@
                 course.attendanceRecords = [];
             }
 
-            // Check if an entry for this date already exists
+            const classEntries = document.querySelectorAll('.class-entry');
+            const attendanceRecords = Array.from(classEntries).map(entry => {
+                return {
+                    status: entry.querySelector('select').value,
+                    notes: entry.querySelector('input[type="text"]').value
+                };
+            });
+
             const existingIndex = course.attendanceRecords.findIndex(record => record.date === attendanceDate);
             if (existingIndex !== -1) {
-                // Update existing record
-                course.attendanceRecords[existingIndex].status = attendanceStatus;
+                course.attendanceRecords[existingIndex].classes = attendanceRecords;
             } else {
-                // Add new record
                 course.attendanceRecords.push({
                     date: attendanceDate,
-                    status: attendanceStatus
+                    classes: attendanceRecords
                 });
             }
-
-            // Sort records by date
             course.attendanceRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             localStorage.setItem('courses', JSON.stringify(courses));
             loadCourses();
             closeMarkAttendanceModal();
         }
+
+        function addClassEntry() {
+            const classEntries = document.getElementById('class-entries');
+            const newEntry = document.createElement('div');
+            newEntry.className = 'class-entry';
+            newEntry.innerHTML = `
+                <div class="input-group">
+                    <label for="attendance-status">Status:</label>
+                    <select required>
+                        <option value="present">Present</option>
+                        <option value="absent">Absent</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="attendance-notes">Notes:</label>
+                    <input type="text" placeholder="Optional notes">
+                </div>
+            `;
+            classEntries.appendChild(newEntry);
+        }
+
 
         function openAttendancePortal(courseId) {
             const courses = JSON.parse(localStorage.getItem('courses'));
@@ -179,10 +196,17 @@
                 recordElement.className = 'attendance-record';
                 recordElement.innerHTML = `
                     <span class="record-date">${record.date}</span>
-                    <select class="record-status" onchange="updateAttendanceStatus('${courseId}', ${index}, this.value)">
-                        <option value="present" ${record.status === 'present' ? 'selected' : ''}>Present</option>
-                        <option value="absent" ${record.status === 'absent' ? 'selected' : ''}>Absent</option>
-                    </select>
+                    <div class="class-records">
+                        ${record.classes.map((classRecord, classIndex) => `
+                            <div class="class-record">
+                                <select class="record-status" onchange="updateAttendanceStatus('${courseId}', ${index}, ${classIndex}, this.value)">
+                                    <option value="present" ${classRecord.status === 'present' ? 'selected' : ''}>Present</option>
+                                    <option value="absent" ${classRecord.status === 'absent' ? 'selected' : ''}>Absent</option>
+                                </select>
+                                <input type="text" value="${classRecord.notes || ''}" onchange="updateAttendanceNotes('${courseId}', ${index}, ${classIndex}, this.value)">
+                            </div>
+                        `).join('')}
+                    </div>
                 `;
                 recordsContainer.appendChild(recordElement);
             });
@@ -192,17 +216,24 @@
             document.getElementById('attendancePortal').style.display = 'none';
         }
 
-        function updateAttendanceStatus(courseId, recordIndex, newStatus) {
+        function updateAttendanceStatus(courseId, recordIndex, classIndex, newStatus) {
             const courses = JSON.parse(localStorage.getItem('courses'));
             const course = courses.find(c => c.id === courseId);
             
-            course.attendanceRecords[recordIndex].status = newStatus;
+            course.attendanceRecords[recordIndex].classes[classIndex].status = newStatus;
             
             localStorage.setItem('courses', JSON.stringify(courses));
             loadCourses();
         }
 
-        // Initialize the page
+        function updateAttendanceNotes(courseId, recordIndex, classIndex, newNotes) {
+            const courses = JSON.parse(localStorage.getItem('courses'));
+            const course = courses.find(c => c.id === courseId);
+            
+            course.attendanceRecords[recordIndex].classes[classIndex].notes = newNotes;
+            
+            localStorage.setItem('courses', JSON.stringify(courses));
+        }
         window.onload = loadCourses;
     </script>
 </body>
